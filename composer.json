@@ -1,0 +1,31 @@
+{
+  "name": "boomdraw/autofinder",
+  "type": "library",
+  "authors": [
+    {
+      "name": "Eugene Buchinsky",
+      "email": "jonston85@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "autoload": {
+    "psr-4": {
+      "Boomdraw\\AutoFinder\\": "src"
+    },
+    "classmap": ["src"]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Boomdraw\\AutoFinder\\Test\\": "tests"
+    }
+  },
+  "require": {
+    "fisharebest/algorithm": "dev-master"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^4.0"
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}
