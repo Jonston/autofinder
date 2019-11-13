@@ -2,7 +2,7 @@
 
 namespace Boomdraw\AutoFinder\Test\Integration\Currencies;
 
-class Currency1 implements CurrencyInterface{
+class Currency1 extends Driver {
 
     public static function supported(): array
     {

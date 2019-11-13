@@ -2,7 +2,7 @@
 
 namespace Boomdraw\AutoFinder;
 
-use Fisharebest\Algorithm\Dijkstra;
+use Taniko\Dijkstra\Graph;
 
 class Finder {
 
@@ -10,76 +10,105 @@ class Finder {
 
     private $classes = [];
 
+    private $currencies = [];
+
+    private $maxPriority;
+
     public function __construct()
     {
-        $this->graph = new CurrencyGraph();
+        $this->graph = new Graph();
 
-        $this->setClasses();
-
-        $this->setGraph();
+        $this->init();
     }
 
     /**
+     * @throws ErrorException
+     *
      * @return void
      */
-    private function setClasses()
+    protected function init(): void
     {
-        foreach (config('app.currencies.classes') as $classConfig){
-            $driver = $classConfig['driver'];
-            $priority = $classConfig['priority'];
-            $currencies = $driver::supported();
-
-            $class = new CurrencyClass($driver, $priority);
-
-            foreach($currencies as $currency){
-                $priority = config(
-                    'app.currencies.priorities.' . $currency,
-                    max(config('app.currencies.priorities', [1]))
-                );
-
-                $class->setCurrency(mb_convert_case($currency, MB_CASE_UPPER), $priority);
-            }
-
-            $this->classes[] = $class;
+        foreach (config('app.currencies.priorities', []) as $currency => $priority){
+            $this->currencies[$currency] = $priority;
         }
 
-        usort($this->classes, function($a, $b){
-            return $a->getPriority() > $b->getPriority();
-        });
+        $this->maxPriority = max(config('app.currencies.priorities', [0]));
+
+        foreach (config('app.currencies.classes') as $classConfig){
+
+            if( ! isset($classConfig['driver']))
+                throw new ErrorException('Config must contain a driver param');
+
+            $driver = $classConfig['driver'];
+            $priority = $classConfig['priority'] ?? 1;
+
+            $this->classes[$driver] = $priority;
+        }
+    }
+
+    /**
+     * @param bool $withPriorities
+     * @return array
+     */
+    protected function getClasses(bool $withPriorities = false): array
+    {
+        return $withPriorities ? $this->classes : array_keys($this->classes);
+    }
+
+    /**
+     * @param string $currency
+     * @return int
+     */
+    protected function getCurrencyPriority(string $currency): int
+    {
+        return $this->currencies[$currency] ?? $this->maxPriority;
+    }
+
+    /**
+     * @param string $class
+     * @return mixed|null
+     */
+    protected function getClassPriority(string $class)
+    {
+        return $this->classes[$class] ?? null;
     }
 
     /**
      * @return void
      */
-    private function setGraph()
+    protected function setGraph(): void
     {
-        foreach($this->classes as $class){
+        foreach($this->getClasses() as $class){
             $neighbors = $this->getClassNeighbors($class);
 
             foreach($neighbors as $neighbor){
-                foreach($this->getIntersectingCurrencies($class, $neighbor) as $currency => $priority)
-                    $this->graph->connect($class->getClassName(), $neighbor->getClassName(), $priority);
+                foreach($this->getIntersectingCurrencies($class, $neighbor) as $currency)
+                    $this->graph->add(
+                        $class . '_' . $currency,
+                        $neighbor . '_' . $currency,
+                        $this->getCurrencyPriority($currency)
+                    );
             }
         }
     }
 
     /**
-     * @param CurrencyClass $source
-     * @param CurrencyClass $destination
+     * @param string $source
+     * @param string $destination
      * @return array
      */
-    private function getIntersectingCurrencies(CurrencyClass $source, CurrencyClass $destination)
+    protected function getIntersectingCurrencies(string $source, string $destination): array
     {
-        return array_intersect_key($source->getCurrencies(), $destination->getCurrencies());
+        return array_intersect($source::supported(), $destination::supported());
     }
 
     /**
-     * @param CurrencyClass $source
+     * @param string $source
      * @return array
      */
-    private function getClassNeighbors(CurrencyClass $source)
+    protected function getClassNeighbors(string $source): array
     {
-        return array_filter($this->classes, function($destination) use ($source){
+        return array_filter($this->getClasses(), function($destination) use ($source){
             return $source !== $destination && $this->getIntersectingCurrencies($source, $destination);
         });
     }
@@ -88,10 +117,10 @@ class Finder {
      * @param string $currency
      * @return array
      */
-    public function getClassesHasCurrency(string $currency)
+    protected function getClassesHasCurrency(string $currency): array
     {
-        return array_filter($this->classes, function($class) use ($currency){
-            return $class->hasCurrency($currency);
+        return array_filter($this->getClasses(), function($class) use ($currency){
+            return $class::isSupported($currency);
         });
     }
 
@@ -100,14 +129,18 @@ class Finder {
      * @param string $to
      * @return array
      */
-    public function findRoutesSingleClass(string $from, string $to)
+    protected function findRoutesSingleClass(string $from, string $to): array
     {
         $routes = [];
 
-        foreach($this->classes as $class){
-            if($class->hasCurrency($from) && $class->hasCurrency($to))
-                $routes[] = $class->getClassName();
+        foreach($this->getClasses() as $class){
+            if($class::isSupported($from) && $class::isSupported($to))
+                $routes[] = $class;
         }
+
+        usort($routes, function($a, $b){
+            return $this->getClassPriority($a) > $this->getClassPriority($b);
+        });
 
         return $routes;
     }
@@ -115,17 +148,26 @@ class Finder {
     /**
      * @param string $from
      * @param string $to
-     * @return void
+     * @return array
      */
-    public function findRoutesMultipleClass(string $from, string $to)
+    protected function findRoutesMultipleClass(string $from, string $to): array
     {
-        $algorithm = new Dijkstra($this->graph->getMap());
+        $this->setGraph();
+
+        $routes = [];
+
+        dd($this->graph->getNodes());
 
         foreach($this->getClassesHasCurrency($from) as $classFrom){
             foreach($this->getClassesHasCurrency($to) as $classTo){
-                $route = $algorithm->shortestPaths($classFrom->getClassName(), $classTo->getClassName());
+                $route = $this->graph->search($classFrom . '_' . $from, $classTo . '_' . $to);
 
-                if($route) $routes[] = $route[0];
+                if($route) {
+                    $routes[] = [
+                        'path' => $route,
+                        'cost' => $this->graph->cost($route)
+                    ];
+                }
             }
         }
 
@@ -144,9 +186,6 @@ class Finder {
      */
     public function find(string $from, string $to)
     {
-        $from = mb_convert_case($from, MB_CASE_UPPER);
-        $to = mb_convert_case($to, MB_CASE_UPPER);
-
         $routes = ($result = $this->findRoutesSingleClass($from, $to))
             ? $result
             : $this->findRoutesMultipleClass($from, $to);

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c7aa9934dfecc5801e8ac6ec5d2e9d7d",
+    "content-hash": "91625d4b3eb634d2fb99273cd8468263",
     "packages": [
         {
             "name": "fisharebest/algorithm",
@@ -53,6 +53,42 @@
                 "myers"
             ],
             "time": "2018-12-24T08:53:40+00:00"
+        },
+        {
+            "name": "taniko/dijkstra",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/taniko/dijkstra.git",
+                "reference": "7b012cb499f0dd57d03a2e3ab36534ba78c52b7f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/taniko/dijkstra/zipball/7b012cb499f0dd57d03a2e3ab36534ba78c52b7f",
+                "reference": "7b012cb499f0dd57d03a2e3ab36534ba78c52b7f",
+                "shasum": ""
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^5.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Taniko\\Dijkstra\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Yuya Aratani",
+                    "email": "hrgruri@gmail.com"
+                }
+            ],
+            "description": "dijkstra algorithm",
+            "time": "2018-07-25T05:36:15+00:00"
         }
     ],
     "packages-dev": [
@@ -4450,7 +4486,8 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "fisharebest/algorithm": 20
+        "fisharebest/algorithm": 20,
+        "taniko/dijkstra": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,

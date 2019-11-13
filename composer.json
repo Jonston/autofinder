@@ -20,7 +20,8 @@
     }
   },
   "require": {
-    "fisharebest/algorithm": "dev-master"
+    "fisharebest/algorithm": "dev-master",
+    "taniko/dijkstra": "dev-master"
   },
   "require-dev": {
     "orchestra/testbench": "^4.0"
