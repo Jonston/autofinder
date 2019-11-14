@@ -3,47 +3,11 @@
 namespace Boomdraw\AutoFinder\Test\Integration;
 
 use Boomdraw\AutoFinder\Finder;
-use Boomdraw\AutoFinder\FinderRefactor;
 use Boomdraw\AutoFinder\Test\Integration\Currencies\Currency1;
 use Boomdraw\AutoFinder\Test\Integration\Currencies\Currency2;
 use Boomdraw\AutoFinder\Test\Integration\Currencies\Currency3;
 
 class AutoFinderTest extends TestCase {
-
-//    public function test_class()
-//    {
-//        config([
-//            'app.currencies.priorities' => [
-//                'UAH' => 1,
-//                'USD' => 2
-//            ]
-//        ]);
-//
-//        config([
-//            'app.currencies.classes' => [
-//                [
-//                    'priority'  => 3,
-//                    'driver'    => Currency1::class
-//                ],
-//                [
-//                    'priority'  => 1,
-//                    'driver'    => Currency2::class
-//                ],
-//                [
-//                    'priority'  => 1,
-//                    'driver'    => Currency3::class
-//                ]
-//            ]
-//        ]);
-//
-//        $finder = new FinderRefactor();
-//
-//        $route = $finder->find('EUR', 'RUB');
-//
-//        dd($route);
-//
-//
-//    }
 
     public function test_find_route_in_single_class_hi_priority()
     {
@@ -71,7 +35,7 @@ class AutoFinderTest extends TestCase {
             ]
         ]);
 
-        $finder = new FinderRefactor();
+        $finder = new Finder();
 
         $this->assertEquals(Currency3::class, $finder->find('UAH', 'EUR'));
     }
@@ -102,7 +66,7 @@ class AutoFinderTest extends TestCase {
             ]
         ]);
 
-        $finder = new FinderRefactor();
+        $finder = new Finder();
 
         $result = $finder->find('RUB', 'EUR');
 
@@ -136,7 +100,7 @@ class AutoFinderTest extends TestCase {
             ]
         ]);
 
-        $finder = new FinderRefactor();
+        $finder = new Finder();
 
         $result = $finder->find('EUR', 'RUB');
 
@@ -170,7 +134,7 @@ class AutoFinderTest extends TestCase {
             ]
         ]);
 
-        $finder = new FinderRefactor();
+        $finder = new Finder();
 
         $result = $finder->find('EUR', 'BYN');
 
@@ -202,7 +166,7 @@ class AutoFinderTest extends TestCase {
             ]
         ]);
 
-        $finder = new FinderRefactor();
+        $finder = new Finder();
 
         $result = $finder->find('EUR', 'RUB');
 

@@ -8,31 +8,21 @@ class Finder {
 
     private $graph;
 
-    private $classes = [];
-
     private $currencies = [];
 
-    private $maxPriority;
+    private $classes = [];
 
     public function __construct()
     {
         $this->graph = new Graph();
 
-        $this->init();
-    }
+        $currencies = [];
 
-    /**
-     * @throws ErrorException
-     *
-     * @return void
-     */
-    protected function init(): void
-    {
         foreach (config('app.currencies.priorities', []) as $currency => $priority){
-            $this->currencies[$currency] = $priority;
+            $currencies[$currency] = $priority;
         }
 
-        $this->maxPriority = max(config('app.currencies.priorities', [0]));
+        $maxPriority = max($currencies ? $currencies : [1]);
 
         foreach (config('app.currencies.classes') as $classConfig){
 
@@ -43,153 +33,133 @@ class Finder {
             $priority = $classConfig['priority'] ?? 1;
 
             $this->classes[$driver] = $priority;
+
+            foreach($driver::supported() as $currency){
+                $id = uniqid();
+
+                $this->currencies[$id] = [
+                    'id'        => $id,
+                    'name'      => $currency,
+                    'class'     => $driver,
+                    'priority'  => $currencies[$currency] ?? $maxPriority
+                ];
+            }
         }
     }
 
-    /**
-     * @param bool $withPriorities
-     * @return array
-     */
-    protected function getClasses(bool $withPriorities = false): array
-    {
-        return $withPriorities ? $this->classes : array_keys($this->classes);
-    }
-
-    /**
-     * @param string $currency
-     * @return int
-     */
-    protected function getCurrencyPriority(string $currency): int
-    {
-        return $this->currencies[$currency] ?? $this->maxPriority;
-    }
-
-    /**
-     * @param string $class
-     * @return mixed|null
-     */
     protected function getClassPriority(string $class)
     {
-        return $this->classes[$class] ?? null;
+        return $this->classes[$class];
     }
 
-    /**
-     * @return void
-     */
-    protected function setGraph(): void
+    protected function getCurrency(string $id)
     {
-        foreach($this->getClasses() as $class){
-            $neighbors = $this->getClassNeighbors($class);
+        return $this->currencies[$id] ?? null;
+    }
 
-            foreach($neighbors as $neighbor){
-                foreach($this->getIntersectingCurrencies($class, $neighbor) as $currency)
-                    $this->graph->add(
-                        $class . '_' . $currency,
-                        $neighbor . '_' . $currency,
-                        $this->getCurrencyPriority($currency)
-                    );
+    public function getCurrenciesByName(string $name)
+    {
+        return array_filter($this->currencies, function($currency) use ($name){
+            return $currency['name'] === $name;
+        });
+    }
+
+    public function getCurrencySiblings(array $source)
+    {
+        return array_filter($this->currencies, function($destination) use ($source){
+            return $source !== $destination && $source['class'] === $destination['class'];
+        });
+    }
+
+    public function getCurrencyNeighbors(array $source)
+    {
+        return array_filter($this->currencies, function($destination) use ($source){
+            return $source['class'] !== $destination['class'] && $source['name'] === $destination['name'];
+        });
+    }
+
+    public function createGraph()
+    {
+        foreach($this->currencies as $source){
+            $siblings = $this->getCurrencySiblings($source);
+            $neighbors = $this->getCurrencyNeighbors($source);
+
+            foreach(array_merge($siblings, $neighbors) as $destination){
+                $this->graph->add($source['id'], $destination['id'], $destination['priority']);
             }
         }
     }
 
-    /**
-     * @param string $source
-     * @param string $destination
-     * @return array
-     */
-    protected function getIntersectingCurrencies(string $source, string $destination): array
+    protected function convertPath(array $path)
     {
-        return array_intersect($source::supported(), $destination::supported());
-    }
+        $route = [];
 
-    /**
-     * @param string $source
-     * @return array
-     */
-    protected function getClassNeighbors(string $source): array
-    {
-        return array_filter($this->getClasses(), function($destination) use ($source){
-            return $source !== $destination && $this->getIntersectingCurrencies($source, $destination);
-        });
-    }
+        foreach($path as $key => $point){
+            $last = end($route);
 
-    /**
-     * @param string $currency
-     * @return array
-     */
-    protected function getClassesHasCurrency(string $currency): array
-    {
-        return array_filter($this->getClasses(), function($class) use ($currency){
-            return $class::isSupported($currency);
-        });
-    }
-
-    /**
-     * @param string $from
-     * @param string $to
-     * @return array
-     */
-    protected function findRoutesSingleClass(string $from, string $to): array
-    {
-        $routes = [];
-
-        foreach($this->getClasses() as $class){
-            if($class::isSupported($from) && $class::isSupported($to))
-                $routes[] = $class;
+            if($last !== $point['class'])
+                $route[] = $point['class'];
         }
 
-        usort($routes, function($a, $b){
-            return $this->getClassPriority($a) > $this->getClassPriority($b);
-        });
-
-        return $routes;
+        return $route;
     }
 
-    /**
-     * @param string $from
-     * @param string $to
-     * @return array
-     */
-    protected function findRoutesMultipleClass(string $from, string $to): array
-    {
-        $this->setGraph();
-
-        $routes = [];
-
-        dd($this->graph->getNodes());
-
-        foreach($this->getClassesHasCurrency($from) as $classFrom){
-            foreach($this->getClassesHasCurrency($to) as $classTo){
-                $route = $this->graph->search($classFrom . '_' . $from, $classTo . '_' . $to);
-
-                if($route) {
-                    $routes[] = [
-                        'path' => $route,
-                        'cost' => $this->graph->cost($route)
-                    ];
-                }
-            }
-        }
-
-        usort($routes, function($a, $b){
-            return count($a) > count($b);
-        });
-
-        return $routes;
-    }
-
-
-    /**
-     * @param string $from
-     * @param string $to
-     * @return array
-     */
     public function find(string $from, string $to)
     {
-        $routes = ($result = $this->findRoutesSingleClass($from, $to))
-            ? $result
-            : $this->findRoutesMultipleClass($from, $to);
+        $this->createGraph();
 
-        return $routes ? $routes[0] : null;
+        $routes = [];
+
+        foreach($this->getCurrenciesByName($from) as $currencyFrom){
+            foreach($this->getCurrenciesByName($to) as $currencyTo){
+
+                $route = $this->graph->search($currencyFrom['id'], $currencyTo['id']);
+
+                $path = array_map(function($point){
+                    return $this->getCurrency($point);
+                }, $route);
+
+                $routes[] = [
+                    'from'  => $currencyFrom,
+                    'to'    => $currencyTo,
+                    'cost'  => $this->graph->cost($route),
+                    'path'  => $this->convertPath($path)
+                ];
+            }
+        }
+
+        if( ! $routes) return null;
+
+        $routes = collect($routes)->sort(function($a, $b){
+            $aEdges = count($a['path']);
+            $bEdges = count($b['path']);
+            $aWeight = $a['cost'];
+            $bWeight = $b['cost'];
+
+            $aPriority = array_reduce($a['path'], function($total, $class){
+                return $total + $this->getClassPriority($class);
+            });
+
+            $bPriority = array_reduce($b['path'], function($total, $class){
+                return $total + $this->getClassPriority($class);
+            });
+
+            if($aEdges > $bEdges) return 1;
+            if($aEdges < $bEdges) return -1;
+
+            if($aPriority > $bPriority) return 1;
+            if($aPriority < $bPriority) return -1;
+
+            if($aWeight > $bWeight) return 1;
+            if($aWeight < $bWeight) return -1;
+        })->all();
+
+        $route = current($routes);
+
+        return (count($route['path']) > 1) ? $route['path'] : $route['path'][0];
     }
+
+
+
+
 }
