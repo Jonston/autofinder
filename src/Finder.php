@@ -57,28 +57,28 @@ class Finder {
         return $this->currencies[$id] ?? null;
     }
 
-    public function getCurrenciesByName(string $name)
+    protected function getCurrenciesByName(string $name)
     {
         return array_filter($this->currencies, function($currency) use ($name){
             return $currency['name'] === $name;
         });
     }
 
-    public function getCurrencySiblings(array $source)
+    protected function getCurrencySiblings(array $source)
     {
         return array_filter($this->currencies, function($destination) use ($source){
             return $source !== $destination && $source['class'] === $destination['class'];
         });
     }
 
-    public function getCurrencyNeighbors(array $source)
+    protected function getCurrencyNeighbors(array $source)
     {
         return array_filter($this->currencies, function($destination) use ($source){
             return $source['class'] !== $destination['class'] && $source['name'] === $destination['name'];
         });
     }
 
-    public function createGraph()
+    protected function createGraph()
     {
         foreach($this->currencies as $source){
             $siblings = $this->getCurrencySiblings($source);
