@@ -2,12 +2,13 @@
 
 namespace Boomdraw\AutoFinder;
 
-class CurrencyClass {
-    private $className;
+class CurrencyClass
+{
+    private string $className;
 
-    private $priority;
+    private integer $priority;
 
-    private $currencies = [];
+    private array $currencies = [];
 
     public function __construct(string $className, int $priority)
     {
@@ -16,32 +17,32 @@ class CurrencyClass {
         $this->priority = $priority;
     }
 
-    public function hasCurrency($currency)
+    public function hasCurrency($currency): bool
     {
         return array_key_exists($currency, $this->currencies);
     }
 
-    public function setCurrency(string $currency, int $priority)
+    public function setCurrency(string $currency, int $priority): void
     {
         $this->currencies[$currency] = $priority;
     }
 
-    public function getCurrencyPriority(string $name)
+    public function getCurrencyPriority(string $name): void
     {
         $this->hasCurrency($name) ? $this->currencies[$name] : null;
     }
 
-    public function getCurrencies()
+    public function getCurrencies(): array
     {
         return $this->currencies;
     }
 
-    public function getClassName()
+    public function getClassName(): string
     {
         return $this->className;
     }
 
-    public function getPriority()
+    public function getPriority(): int
     {
         return $this->priority;
     }

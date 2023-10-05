@@ -4,13 +4,14 @@ namespace Boomdraw\AutoFinder;
 
 use Taniko\Dijkstra\Graph;
 
-class Finder {
+class Finder
+{
 
-    private $graph;
+    private Graph $graph;
 
-    private $currencies = [];
+    private array $currencies = [];
 
-    private $classes = [];
+    private array $classes = [];
 
     public function __construct()
     {
@@ -22,9 +23,9 @@ class Finder {
             $currencies[$currency] = $priority;
         }
 
-        $maxPriority = max($currencies ? $currencies : [1]);
+        $maxPriority = max($currencies ?: [1]);
 
-        foreach (config('app.currencies.classes') as $classConfig){
+        foreach (config('app.currencies.classes') as $classConfig) {
 
             if( ! isset($classConfig['driver']))
                 throw new ErrorException('Config must contain a driver param');
@@ -47,38 +48,38 @@ class Finder {
         }
     }
 
-    protected function getClassPriority(string $class)
+    protected function getClassPriority(string $class): int
     {
         return $this->classes[$class];
     }
 
-    protected function getCurrency(string $id)
+    protected function getCurrency(string $id): ?array
     {
         return $this->currencies[$id] ?? null;
     }
 
-    protected function getCurrenciesByName(string $name)
+    protected function getCurrenciesByName(string $name): array
     {
         return array_filter($this->currencies, function($currency) use ($name){
             return $currency['name'] === $name;
         });
     }
 
-    protected function getCurrencySiblings(array $source)
+    protected function getCurrencySiblings(array $source): array
     {
         return array_filter($this->currencies, function($destination) use ($source){
             return $source !== $destination && $source['class'] === $destination['class'];
         });
     }
 
-    protected function getCurrencyNeighbors(array $source)
+    protected function getCurrencyNeighbors(array $source): array
     {
         return array_filter($this->currencies, function($destination) use ($source){
             return $source['class'] !== $destination['class'] && $source['name'] === $destination['name'];
         });
     }
 
-    protected function createGraph()
+    protected function createGraph(): void
     {
         foreach($this->currencies as $source){
             $siblings = $this->getCurrencySiblings($source);
@@ -90,7 +91,7 @@ class Finder {
         }
     }
 
-    protected function convertPath(array $path)
+    protected function convertPath(array $path): array
     {
         $route = [];
 
@@ -104,14 +105,14 @@ class Finder {
         return $route;
     }
 
-    public function find(string $from, string $to)
+    public function find(string $from, string $to): array|string|null
     {
         $this->createGraph();
 
         $routes = [];
 
-        foreach($this->getCurrenciesByName($from) as $currencyFrom){
-            foreach($this->getCurrenciesByName($to) as $currencyTo){
+        foreach($this->getCurrenciesByName($from) as $currencyFrom) {
+            foreach($this->getCurrenciesByName($to) as $currencyTo) {
 
                 $route = $this->graph->search($currencyFrom['id'], $currencyTo['id']);
 
@@ -130,17 +131,17 @@ class Finder {
 
         if( ! $routes) return null;
 
-        $routes = collect($routes)->sort(function($a, $b){
+        $routes = collect($routes)->sort(function($a, $b) {
             $aEdges = count($a['path']);
             $bEdges = count($b['path']);
             $aWeight = $a['cost'];
             $bWeight = $b['cost'];
 
-            $aPriority = array_reduce($a['path'], function($total, $class){
+            $aPriority = array_reduce($a['path'], function($total, $class) {
                 return $total + $this->getClassPriority($class);
             });
 
-            $bPriority = array_reduce($b['path'], function($total, $class){
+            $bPriority = array_reduce($b['path'], function($total, $class) {
                 return $total + $this->getClassPriority($class);
             });
 
@@ -158,8 +159,4 @@ class Finder {
 
         return (count($route['path']) > 1) ? $route['path'] : $route['path'][0];
     }
-
-
-
-
 }

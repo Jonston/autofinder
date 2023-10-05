@@ -2,15 +2,16 @@
 
 namespace Boomdraw\AutoFinder;
 
-class CurrencyGraph {
-    private $map = [];
+class CurrencyGraph
+{
+    private array $map = [];
 
-    public function connect(string $pointFrom, string $pointTo, int $weight)
+    public function connect(string $pointFrom, string $pointTo, int $weight): void
     {
         $this->map[$pointFrom][$pointTo] = $weight;
     }
 
-    public function getMap()
+    public function getMap(): array
     {
         return $this->map;
     }

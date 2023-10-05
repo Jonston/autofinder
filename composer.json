@@ -20,11 +20,11 @@
     }
   },
   "require": {
-    "fisharebest/algorithm": "dev-master",
+    "fisharebest/algorithm": "1.6.0",
     "taniko/dijkstra": "dev-master"
   },
   "require-dev": {
-    "orchestra/testbench": "^4.0"
+    "orchestra/testbench": "^v8.12.2"
   },
   "scripts": {
     "test": "phpunit"
